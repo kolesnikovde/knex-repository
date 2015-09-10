@@ -208,6 +208,25 @@ proto.destroyAll = function(conditions) {
 
 // Utils.
 
+proto.updateTimestamps = function(fields) {
+  if (!this.timestamps) return;
+
+  var ts = [].slice.call(arguments, 1),
+      timestamps = this.timestamps,
+      now = new Date(),
+      column;
+
+  for (var i = 0, len = ts.length; i < len; ++i) {
+    var column = timestamps[ts[i]];
+
+    if (column) {
+      fields[column] || (fields[column] = now);
+    }
+  }
+
+  return fields;
+}
+
 proto.fetchOne = function(promise) {
   return new Promise(function(resolve, reject) {
     promise.then(function(rows) { resolve(rows.pop()) })
