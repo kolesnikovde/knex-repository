@@ -4,7 +4,7 @@ module.exports = Repository;
 
 /**
  * @param {Object} options
- * @param {Object} options.knex
+ * @param {Object} options.db
  * @param {String} options.tableName=
  * @param {Repository} options.scope=
  */
@@ -12,13 +12,13 @@ module.exports = Repository;
 function Repository(options) {
   options || (options = {});
 
-  this.knex = options.knex;
+  this.db = options.db;
 
   if (options.tableName) {
     this.tableName = options.tableName;
   }
 
-  this._scope = options.scope || this.knex(this.tableName);
+  this._scope = options.scope || this.db(this.tableName);
 }
 
 var proto = Repository.prototype;
@@ -115,7 +115,7 @@ proto.all = function(conditions) {
   if (conditions) {
     return this.scoped(function() { return this.where(conditions) });
   } else {
-    return this.scoped();
+    return this.scope();
   }
 }
 
@@ -155,7 +155,7 @@ proto.update = function(id, fields) {
 /**
  * @param {Object} conditions=
  * @param {Object} fields
- * @returns {Promise} 
+ * @returns {Promise}
  */
 
 proto.updateAll = function(conditions, fields) {
@@ -208,6 +208,21 @@ proto.destroyAll = function(conditions) {
 
 // Utils.
 
+/**
+ * @param {String|Array} value
+ * @returns {String}
+ */
+
+proto.quote = function(value) {
+  return Array.isArray(value)
+    ? value.map(proto.quote).join(',')
+    : "'" + value + "'";
+}
+
+proto.fetchOne = function(promise) {
+  return promise.then(function(rows) { return Promise.resolve(rows.pop()) });
+}
+
 proto.updateTimestamps = function(fields) {
   if (!this.timestamps) return;
 
@@ -216,7 +231,7 @@ proto.updateTimestamps = function(fields) {
       now = new Date(),
       column;
 
-  for (var i = 0, len = ts.length; i < len; ++i) {
+  for (var i = 0, l = ts.length; i < l; ++i) {
     var column = timestamps[ts[i]];
 
     if (column) {
@@ -225,21 +240,6 @@ proto.updateTimestamps = function(fields) {
   }
 
   return fields;
-}
-
-proto.fetchOne = function(promise) {
-  return new Promise(function(resolve, reject) {
-    promise.then(function(rows) { resolve(rows.pop()) })
-           .catch(reject);
-  });
-}
-
-proto.quote = function(value) {
-  if (Array.isArray(value)) {
-    return value.map(function(v) { return "'" + v + "'" }).join(',');
-  } else {
-    return "'" + value + "'";
-  }
 }
 
 proto.toSQL = function() {
