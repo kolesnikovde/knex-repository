@@ -1,0 +1,32 @@
+{
+  "name": "knex-repository",
+  "version": "0.1.0",
+  "description": "Fat-free repository pattern implementation on top of knex.js.",
+  "author": "Danil Kolesnikov <kolesnikovde@gmail.com>",
+  "homepage": "https://github.com/kolesnikovde/knex-repository",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:kolesnikovde/knex-repository.git"
+  },
+  "keywords": [
+    "pg",
+    "postgres",
+    "knex",
+    "db",
+    "database",
+    "repository"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^2.10.1",
+    "knex": "^0.8.6",
+    "pg": "^4.4.2"
+  },
+  "devDependencies": {
+    "mocha": "2.3.0"
+  }
+}
