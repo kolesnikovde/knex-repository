@@ -6,7 +6,7 @@ module.exports = Repository;
  * @param {Object} options
  * @param {Object} options.db
  * @param {String} options.tableName=
- * @param {Repository} options.scope=
+ * @param {Object} options.scope=
  */
 
 function Repository(options) {
@@ -30,6 +30,12 @@ var proto = Repository.prototype;
 proto.tableName = null;
 
 /**
+ * Default entity class.
+ */
+
+proto.entityClass = null;
+
+/**
  * Default timestamps.
  */
 
@@ -37,6 +43,14 @@ proto.timestamps = {
   createdAt: 'created_at',
   updatedAt: 'updated_at'
 };
+
+/**
+ * @param {Function} entity
+ */
+
+Repository.entity = function(entity) {
+  proto.entityClass = entity;
+}
 
 /**
  * @param {Object} scopes - scopeName => fn
@@ -50,16 +64,12 @@ Repository.scopes = function(scopes) {
   });
 }
 
-/**
- * @returns {Object}
- */
-
 proto.scope = function() {
   return this._scope.clone();
 }
 
 proto.then = function(fn) {
-  return this._scope.then(fn);
+  return this.fetch(this._scope).then(fn);
 }
 
 proto.reject = function(fn) {
@@ -71,7 +81,7 @@ proto.finally = function(fn) {
 }
 
 /**
- * @param {Function} fn - will be invoked in knex scope
+ * @param {Function} fn= - will be invoked in knex scope
  * @param {Array} args=
  * @returns {Repository}
  */
@@ -79,7 +89,7 @@ proto.finally = function(fn) {
 proto.scoped = function(fn, args) {
   return new this.constructor({
     db: this.db,
-    scope: fn.apply(this.scope(), args)
+    scope: fn ? fn.apply(this.scope(), args) : this.scope()
   });
 }
 
@@ -91,7 +101,8 @@ proto.scoped = function(fn, args) {
  *
  *     orders.create(fields)
  *       .then(function(order) {
- *         clients.update(order.client_id, { last_order_id: order.id })
+ *         // some persistency logic
+ *         clients.updateLastOrder(order)
  *                .then(trx.commit)
  *                .catch(trx.rollback);
  *       })
@@ -108,20 +119,18 @@ proto.transacting = function(trx) {
 
 /**
  * @param {Object} conditions=
- * @returns {Promise} - resolves with object or null
+ * @returns {Promise} - resolves with list of records
  */
 
 proto.all = function(conditions) {
-  if (conditions) {
-    return this.scoped(function() { return this.where(conditions) });
-  } else {
-    return this.scope();
-  }
+  return this.scoped(conditions && function() {
+    return this.where(conditions);
+  });
 }
 
 /**
  * @param {Object} conditions=
- * @returns {Promise} - resolves with object or null
+ * @returns {Promise} - resolves with record or null
  */
 
 proto.first = function(conditions) {
@@ -130,7 +139,7 @@ proto.first = function(conditions) {
 
 /**
  * @param {Object} fields=
- * @returns {Promise} - resolves with created object
+ * @returns {Promise} - resolves with created record
  */
 
 proto.create = function(fields) {
@@ -143,7 +152,7 @@ proto.create = function(fields) {
 /**
  * @param {Integer} id
  * @param {Object} fields=
- * @returns {Promise} - resolves with updated object
+ * @returns {Promise} - resolves with updated record
  */
 
 proto.update = function(id, fields) {
@@ -190,7 +199,7 @@ proto.count = function(expression) {
 
 /**
  * @param {Integer} id
- * @returns {Promise} - resolves with deleted object
+ * @returns {Promise} - resolves with deleted record
  */
 
 proto.destroy = function(id) {
@@ -209,19 +218,35 @@ proto.destroyAll = function(conditions) {
 // Utils.
 
 /**
- * @param {String|Array} value
- * @returns {String}
+ * @param {Promise} promise
+ * @returns {Object[]}
  */
 
-proto.quote = function(value) {
-  return Array.isArray(value)
-    ? value.map(proto.quote).join(',')
-    : "'" + value + "'";
+proto.fetch = function(promise) {
+  var entityClass = this.entityClass;
+
+  return promise.then(function(res) {
+    if (!Array.isArray(res) || !entityClass) return res;
+
+    return res.map(function(r) { return new entityClass(r) });
+  });
 }
 
+/**
+ * @param {Promise} promise
+ * @returns {Object}
+ */
+
 proto.fetchOne = function(promise) {
-  return promise.then(function(rows) { return Promise.resolve(rows.pop()) });
+  return this.fetch(promise).then(function(res) { return res.pop() });
 }
+
+/**
+ * Updates timestamps.
+ *
+ * @param {Object} fields
+ * @param {...ts} ts
+ */
 
 proto.updateTimestamps = function(fields) {
   if (!this.timestamps) return;
@@ -238,9 +263,22 @@ proto.updateTimestamps = function(fields) {
       fields[column] || (fields[column] = now);
     }
   }
-
-  return fields;
 }
+
+/**
+ * @param {String|String[]} value
+ * @returns {String}
+ */
+
+proto.quote = function(value) {
+  return Array.isArray(value)
+    ? value.map(proto.quote).join(',')
+    : "'" + value + "'";
+}
+
+/**
+ * @returns {Object}
+ */
 
 proto.toSQL = function() {
   return this._scope.toSQL();

@@ -9,16 +9,28 @@ var knex = require('knex')({
   connection: process.env.DB || 'postgres://localhost/postgres'
 });
 
+var testTableName = 'knex_repository_test';
+
 // Sample repository.
 function RecordsRepository(options) {
+  this.tableName = testTableName;
+  this.entityClass = Record;
   Repository.call(this, options);
 }
 
 util.inherits(RecordsRepository, Repository);
 
-var proto = Repository.prototype;
+Repository.scopes.call(RecordsRepository, {
+  bars: function() {
+    return this.where('name', 'bar');
+  }
+});
 
-proto.tableName = 'knex_repository_test';
+// "Model" class.
+function Record(props) {
+  // _.extend(this, props);
+  for (var key in props) this[key] = props[key];
+}
 
 var records = new RecordsRepository({ db: knex });
 
@@ -26,7 +38,7 @@ describe('Repository', function() {
   // Setup/cleanup repository table.
   before(function(done) {
     knex.schema
-        .createTable(proto.tableName, function(table) {
+        .createTable(testTableName, function(table) {
           table.increments('id');
           table.string('name');
           table.dateTime('updated_at');
@@ -37,7 +49,7 @@ describe('Repository', function() {
 
   after(function(done) {
     knex.schema
-        .dropTable(proto.tableName)
+        .dropTable(testTableName)
         .then(function() { done() });
   });
 
@@ -48,8 +60,11 @@ describe('Repository', function() {
   describe('#create', function() {
     it('creates record', function(done) {
       records.create().then(function(r1) {
+        assert.equal(r1 instanceof Record, true);
+
         records.count().then(function(count) {
           assert.equal(count, 1);
+
           records.first().then(function(r2) {
             assert.deepEqual(r2, r1);
             done();
@@ -143,6 +158,23 @@ describe('Repository', function() {
             assert.equal(count, 0);
             done();
           });
+        });
+      });
+    });
+  });
+
+  describe('.scopes', function() {
+    it('defines scopes', function(done) {
+      Promise.join(
+        records.create({ name: 'foo' }),
+        records.create({ name: 'bar' }),
+        records.create()
+      ).then(function() {
+        records.bars().then(function(bars) {
+          assert.equal(bars.length, 1);
+          assert.equal(bars[0].name, 'bar');
+          assert.equal(bars[0] instanceof Record, true);
+          done();
         });
       });
     });

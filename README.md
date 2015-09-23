@@ -15,6 +15,8 @@ var Repository = require('knex-repository');
 
 function ClientsRepository(options) {
   this.tableName = 'clients';
+  // optional
+  this.entityClass = Client;
   Repository.call(this, options);
 }
 
@@ -22,14 +24,12 @@ util.inherits(ClientsRepository, Repository);
 
 var proto = ClientsRepository.prototype;
 
-// define scope
-ClientsRepository.scopes({
-  online: function() {
-    return this.where('last_seen_at', '>=', new Date(Date.now() - 15 * 60 * 1000));
-  }
-});
+proto.online = function() {
+  return this.scoped(function() {
+    return this.where('last_seen_at', '>=', new Date(Date.now() - 15 * 60000));
+  });
+}
 
-// or
 proto.byActivity = function() {
   return this.scoped(function() {
     return this.order('last_seen_at', 'desc');
@@ -39,11 +39,11 @@ proto.byActivity = function() {
 var clients = new ClientsRepository({ db: knex });
 
 clients.create({ firstName: 'John', secondName: 'Doe' }).then(function(c) {
-  // ...
+  // c is a Client
 });
 
 clients.byActivity().online().then(function(cs) {
-  // ...
+  // cs is a Client[]
 });
 ```
 
@@ -51,6 +51,8 @@ CoffeeScript:
 ```coffeescript
 class ClientsRepository extends Repository
   tableName: 'clients'
+
+  @entity Client
 
   @scopes
     online: ->
