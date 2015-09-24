@@ -30,6 +30,12 @@ var proto = Repository.prototype;
 proto.tableName = null;
 
 /**
+ * Default primary key.
+ */
+
+proto.pk = 'id';
+
+/**
  * Default entity class.
  */
 
@@ -50,6 +56,14 @@ proto.timestamps = {
 
 Repository.entity = function(entity) {
   proto.entityClass = entity;
+}
+
+/**
+ * @param {mixed} pk
+ */
+
+Repository.pk = function(pk) {
+  proto.pk = pk;
 }
 
 /**
@@ -150,15 +164,15 @@ proto.create = function(fields) {
 }
 
 /**
- * @param {Integer} id
+ * @param {mixed} pk
  * @param {Object} fields=
  * @returns {Promise} - resolves with updated record
  */
 
-proto.update = function(id, fields) {
+proto.update = function(pk, fields) {
   fields || (fields = {});
 
-  return this.fetchOne(this.updateAll({ id: id }, fields).returning('*'));
+  return this.fetchOne(this.updateAll(this.pkConditions(pk), fields).returning('*'));
 }
 
 /**
@@ -198,12 +212,12 @@ proto.count = function(expression) {
 }
 
 /**
- * @param {Integer} id
+ * @param {mixed} pk
  * @returns {Promise} - resolves with deleted record
  */
 
-proto.destroy = function(id) {
-  return this.fetchOne(this.destroyAll({ id: id }).returning('*'));
+proto.destroy = function(pk) {
+  return this.fetchOne(this.destroyAll(this.pkConditions(pk)).returning('*'));
 }
 
 /**
@@ -216,6 +230,27 @@ proto.destroyAll = function(conditions) {
 }
 
 // Utils.
+
+/**
+ * @param {mixed} pk
+ * @returns {Object}
+ */
+
+proto.pkConditions = function(pk) {
+  var cond = {},
+      pkCol = this.pk;
+
+  if (Array.isArray(pkCol)) {
+    for (var i = 0, l = pkCol.length; i < l; ++i) {
+      cond[pkCol[i]] = pk[i];
+    }
+  } else {
+    cond[pkCol] = pk;
+  }
+
+  return cond;
+}
+
 
 /**
  * @param {Promise} promise
