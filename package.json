@@ -1,6 +1,6 @@
 {
   "name": "knex-repository",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fat-free repository pattern implementation on top of knex.js.",
   "author": "Danil Kolesnikov <kolesnikovde@gmail.com>",
   "homepage": "https://github.com/kolesnikovde/knex-repository",
