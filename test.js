@@ -75,7 +75,7 @@ describe('Repository', function() {
   });
 
   describe('#update', function() {
-    it('updates record by id', function(done) {
+    it('updates record by pk', function(done) {
       records.create().then(function(r1) {
         records.update(r1.id, { name: 'foo' }).then(function(r2) {
           assert.equal(r1.updated_at.toString(), r2.updated_at.toString());
@@ -118,7 +118,7 @@ describe('Repository', function() {
   });
 
   describe('#destroy', function() {
-    it('destroys record by id', function(done) {
+    it('destroys record by pk', function(done) {
       records.create().then(function(r1) {
         records.destroy(r1.id).then(function(r2) {
           assert.deepEqual(r1, r2);

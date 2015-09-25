@@ -17,6 +17,8 @@ function ClientsRepository(options) {
   this.tableName = 'clients';
   // optional
   this.entityClass = Client;
+  // default
+  this.pk = 'id';
   Repository.call(this, options);
 }
 
@@ -51,8 +53,8 @@ CoffeeScript:
 ```coffeescript
 class ClientsRepository extends Repository
   tableName: 'clients'
-
-  @entity Client
+  pk: 'id'
+  entityClass: Client
 
   @scopes
     online: ->
